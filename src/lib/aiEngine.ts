@@ -9,40 +9,23 @@ export interface AiResult {
 }
 
 function buildPrompt(frameCount: number, timestamps: number[], duration: number): string {
-  const timeline = timestamps
-    .map((t, i) => 'Frame ' + (i + 1) + ' (' + t + 'ms)')
-    .join('\n  ')
+  const timeline = timestamps.map((t, i) => 'Frame ' + (i + 1) + ': ' + t + 'ms').join('; ')
 
-  return [
-    'You are an expert CSS animation engineer. You are given ' + frameCount + ' sequential frames extracted from a screen recording of a web animation.',
-    '',
-    '## Your task',
-    'Analyze EVERY frame carefully and produce pixel-accurate CSS @keyframes that reproduce the exact same visual animation.',
-    '',
-    '## Step-by-step analysis (do this internally, then output only the final CSS)',
-    '1. **Element identification**: What elements are visible? (buttons, text, shapes, backgrounds, icons, etc.)',
-    '2. **Motion tracking**: For each element, what changes between consecutive frames? Track:',
-    '   - Position (translateX, translateY) — estimate pixels',
-    '   - Scale (scaleX, scaleY) — estimate ratio',
-    '   - Rotation (rotate) — estimate degrees',
-    '   - Opacity — estimate value 0-1',
-    '   - Color changes — estimate hex values',
-    '   - Blur, shadow, or other filter effects',
-    '   - Width/height changes',
-    '   - Border-radius changes',
-    '3. **Timing calculation**: Total animation duration is ~' + duration + 'ms. Calculate the exact percentage for each keyframe based on its timestamp.',
-    '4. **Easing inference**: Look at the spacing between frame positions. If motion accelerates, use ease-in. If it decelerates, use ease-out. If it speeds up then slows, use ease-in-out or cubic-bezier.',
-    '',
-    '## Frame timeline',
-    '  ' + timeline,
-    '',
-    '## Output rules',
-    '- Output ONLY valid CSS code inside a single ```css code block',
-    '- Use descriptive animation names (e.g., button-pop, fade-slide-in, shimmer)',
-    '- For each animated element, provide: the @keyframes AND the element selector with animation property',
-    '- Use the most specific selector you can infer from the frame context',
-    '- All timing values must be precise percentages based on the timestamps above',n    '- If elements appear/disappear (opacity 0 to 1), include that in the keyframes',n    '- If the animation loops, add infinite; if it plays once, do not add infinite',n    '- Use CSS custom properties only if the values repeat across animations',n    '',n    '## Example output quality',n    'BAD: animation: slide 1s ease infinite;',n    'GOOD: animation: card-enter 800ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards;',n    '',n    'Now analyze the frames and output the CSS.'
-  ].join('\n')
+  const p = 'You are an expert CSS animation engineer. You are given ' + frameCount + ' sequential frames from a screen recording.\n\n'
+    + 'ANALYSIS STEPS:\n'
+    + '1. Element identification: What elements are visible?\n'
+    + '2. Motion tracking per element: translateX/Y, scale, rotate, opacity, color, blur, shadow, size changes\n'
+    + '3. Timing: total duration ~' + duration + 'ms. Calculate exact keyframe percentages from timestamps.\n'
+    + '4. Easing: infer from spacing between frame positions.\n\n'
+    + 'FRAME TIMELINE: ' + timeline + '\n\n'
+    + 'OUTPUT RULES:\n'
+    + '- Output ONLY valid CSS inside a single ```css code block\n'
+    + '- Use descriptive animation names\n'
+    + '- Provide both @keyframes and element selector with animation property\n'
+    + '- Timing percentages must match frame timestamps\n'
+    + '- Distinguish looping vs one-shot animations\n\n'
+    + 'Analyze the frames and output the CSS.'
+  return p
 }
 
 export async function analyzeFrames(
@@ -70,7 +53,7 @@ export async function analyzeFrames(
       messages: [
         {
           role: 'system',
-          content: 'You are a precise CSS animation engineer. You analyze frame-by-frame video captures and produce exact CSS @keyframes code. You are meticulous about timing, easing curves, and pixel-level accuracy. Output only valid CSS code, nothing else.',
+          content: 'You are a precise CSS animation engineer. Output only valid CSS code.',
         },
         {
           role: 'user',
@@ -93,11 +76,9 @@ export async function analyzeFrames(
   const data = await response.json()
   const content = data.choices?.[0]?.message?.content || ''
 
-  // 提取 CSS 代码块
   const cssMatch = content.match(/```css\n([\s\S]*?)```/)
   const css = cssMatch ? cssMatch[1].trim() : content
 
-  // 提取描述（代码块之前的内容）
   const descMatch = content.match(/^(?!```)[\s\S]*?(?=```css|$)/)
   const description = descMatch ? descMatch[0].trim() : ''
 
