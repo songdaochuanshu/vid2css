@@ -1,75 +1,20 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useRef } from 'react'
 import { toast } from 'react-hot-toast'
 
 interface Props {
-  css: string
+  code: string
 }
 
-// 从 CSS 中提取选择器，生成预览用的占位 HTML
-function generatePreviewHtml(css: string): string {
-  const elements: string[] = []
-  const seen = new Set<string>()
+export default function Preview({ code }: Props) {
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // 匹配选择器：.class、#id、tag（排除 @keyframes 和注释）
-  const selectorRegex = /^\s*([.#]?[a-zA-Z_][\w-]*)\s*\{/gm
-  let match
-
-  while ((match = selectorRegex.exec(css)) !== null) {
-    const raw = match[1].trim()
-
-    // 跳过 @keyframes 内的百分比、@media 等
-    if (/^\d/.test(raw) || raw.startsWith('@')) continue
-
-    const key = raw.toLowerCase()
-    if (seen.has(key)) continue
-    seen.add(key)
-
-    if (raw.startsWith('.')) {
-      // class selector
-      const cls = raw.slice(1)
-      if (cls === 'preview-target') continue
-      elements.push('<div class="' + cls + '">' + cls + '</div>')
-    } else if (raw.startsWith('#')) {
-      const id = raw.slice(1)
-      elements.push('<div id="' + id + '">' + id + '</div>')
-    } else {
-      // tag selector - 只保留合理的 HTML 标签
-      const validTags = ['div', 'button', 'span', 'p', 'h1', 'h2', 'h3', 'a', 'input', 'section', 'article']
-      if (validTags.includes(raw)) {
-        elements.push('<' + raw + '>' + raw + '</' + raw + '>')
-      } else {
-        elements.push('<div class="' + raw + '">' + raw + '</div>')
-      }
-    }
-  }
-
-  if (elements.length === 0) {
-    return '<div style="color:#5c5c72;font-size:0.85rem;">No previewable elements found in CSS.</div>'
-  }
-
-  return '<div style="display:flex;flex-wrap:wrap;gap:1rem;align-items:center;justify-content:center;">'
-    + elements.join('\n')
-    + '</div>'
-}
-
-export default function Preview({ css }: Props) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const styleRef = useRef<HTMLStyleElement | null>(null)
-
-  const previewHtml = useMemo(() => generatePreviewHtml(css), [css])
-
-  useEffect(() => {
-    styleRef.current?.remove()
-    const style = document.createElement('style')
-    style.textContent = css
-    document.head.appendChild(style)
-    styleRef.current = style
-    return () => { style.remove() }
-  }, [css])
+  // Build sandboxed iframe with the Three.js HTML content
+  const srcdoc = '<!DOCTYPE html>' + code.replace(/<!DOCTYPE[^>]*>/i, '').replace(/<html[^>]*>/i, '').replace(/<\/html>/i, '').replace(/<\/body>/i, '')
+    || '<html><body style="margin:0;background:#111;display:flex;align-items:center;justify-content:center;color:#555;font-family:sans-serif;"><p>No preview available</p></body></html>'
 
   function handleCopy() {
-    navigator.clipboard.writeText(css).then(() => {
-      toast.success('CSS copied!', {
+    navigator.clipboard.writeText(code).then(() => {
+      toast.success('Three.js code copied!', {
         style: {
           background: '#16161e',
           color: '#eeeef0',
@@ -81,22 +26,42 @@ export default function Preview({ css }: Props) {
     })
   }
 
+  function handleOpenFull() {
+    const blob = new Blob([code], { type: 'text/html' })
+    const url = URL.createObjectURL(blob)
+    window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 5000)
+  }
+
   return (
     <div className="rounded-2xl border border-white/5 bg-[var(--bg-card)] overflow-hidden">
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Preview</h3>
-        <button
-          onClick={handleCopy}
-          className="px-3 py-1 text-xs font-semibold rounded-lg bg-[#3cefff] text-black hover:brightness-110 transition-all"
-        >
-          Copy CSS
-        </button>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Three.js Preview</h3>
+        <div className="flex gap-2">
+          <button
+            onClick={handleOpenFull}
+            className="px-3 py-1 text-xs font-semibold rounded-lg border border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.05] transition-all"
+          >
+            Full Screen
+          </button>
+          <button
+            onClick={handleCopy}
+            className="px-3 py-1 text-xs font-semibold rounded-lg bg-[#3cefff] text-black hover:brightness-110 transition-all"
+          >
+            Copy Code
+          </button>
+        </div>
       </div>
-      <div
-        ref={containerRef}
-        className="flex items-center justify-center min-h-[200px] p-8 bg-gradient-to-b from-[#111118] to-[var(--bg-card)]"
-        dangerouslySetInnerHTML={{ __html: previewHtml }}
-      />
+      <div className="relative bg-[#0a0a0f]">
+        <iframe
+          ref={iframeRef}
+          srcDoc={srcdoc}
+          sandbox="allow-scripts allow-same-origin"
+          className="w-full border-0"
+          style={{ height: '400px' }}
+          title="Three.js Preview"
+        />
+      </div>
     </div>
   )
 }
