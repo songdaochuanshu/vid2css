@@ -1,6 +1,6 @@
 import type { Frame } from './frameExtractor'
 
-const AGNES_API_URL = 'https://agnes-ai.com/v1/chat/completions'
+const AGNES_API_URL = 'https://apihub.agnes-ai.com/v1/chat/completions'
 
 export interface AiResult {
   css: string
@@ -26,6 +26,8 @@ export async function analyzeFrames(
   const timestamps = frames.map((f) => f.timestamp)
   const prompt = buildPrompt(frames.length, timestamps)
 
+  // Agnes API 要求 image_url 是公开可访问的 URL
+  // 这里用 base64 data URL 试试，部分 OpenAI 兼容 API 支持
   const imageMessages = frames.map((frame) => ({
     type: 'image_url' as const,
     image_url: { url: frame.dataUrl },
