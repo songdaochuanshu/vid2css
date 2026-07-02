@@ -2,22 +2,22 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
 interface Props {
-  css: string
+  code: string
   description?: string
 }
 
-export default function CodeOutput({ css, description }: Props) {
+export default function CodeOutput({ code, description }: Props) {
   return (
     <div className="rounded-2xl border border-white/5 bg-[var(--bg-card)] overflow-hidden">
       <div className="px-4 py-3 border-b border-white/5">
-        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Generated CSS</h3>
+        <h3 className="text-sm font-semibold text-[var(--text-primary)]">Generated Three.js Code</h3>
         {description && (
           <p className="text-xs text-[var(--text-muted)] mt-1">{description}</p>
         )}
       </div>
       <div className="max-h-[400px] overflow-auto">
         <SyntaxHighlighter
-          language="css"
+          language="html"
           style={oneDark}
           customStyle={{
             margin: 0,
@@ -28,7 +28,7 @@ export default function CodeOutput({ css, description }: Props) {
             borderRadius: 0,
           }}
         >
-          {css}
+          {code}
         </SyntaxHighlighter>
       </div>
     </div>
