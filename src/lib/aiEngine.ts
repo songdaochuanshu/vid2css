@@ -10,42 +10,12 @@ export interface AiResult {
 
 function buildPrompt(frameCount: number, timestamps: number[]): string {
   const timeline = timestamps
-    .map((t, i) => `Frame ${i + 1}: ${t}ms`)
+    .map((t, i) => 'Frame ' + (i + 1) + ': ' + t + 'ms')
     .join(', ')
 
-  return `You are a CSS animation expert. The user has uploaded ${frameCount} keyframes from an animation.
+  const codeBlock = '```css\n/* Description of the animation */\n@keyframes animation-name {\n  0% { ... }\n  50% { ... }\n  100% { ... }\n}\n\n.element-selector {\n  animation: animation-name 1s ease-in-out infinite;\n}\n```'
 
-Frame timeline: ${timeline}
-
-Analyze the motion between frames and generate CSS @keyframes animation code.
-
-Requirements:
-1. Identify the animated elements and their properties (translate, rotate, scale, opacity, color, etc.)
-2. Calculate precise timing percentages for each keyframe
-3. Use appropriate CSS easing functions (ease, ease-in-out, cubic-bezier, etc.)
-4. Output complete, ready-to-use CSS code
-5. If multiple elements animate independently, generate separate @keyframes for each
-6. Include the element selectors in your output
-
-Output format:
-- First, a brief description of what you observe in the animation
-- Then the complete CSS code block
-
-Use this exact format:
-```css
-/* Description of the animation */
-@keyframes animation-name {
-  0% { ... }
-  50% { ... }
-  100% { ... }
-}
-
-.element-selector {
-  animation: animation-name 1s ease-in-out infinite;
-}
-``` `
-
-IMPORTANT: Only output valid CSS. No explanations outside the code block.`
+  return 'You are a CSS animation expert. The user has uploaded ' + frameCount + ' keyframes from an animation.\n\nFrame timeline: ' + timeline + '\n\nAnalyze the motion between frames and generate CSS @keyframes animation code.\n\nRequirements:\n1. Identify the animated elements and their properties (translate, rotate, scale, opacity, color, etc.)\n2. Calculate precise timing percentages for each keyframe\n3. Use appropriate CSS easing functions (ease, ease-in-out, cubic-bezier, etc.)\n4. Output complete, ready-to-use CSS code\n5. If multiple elements animate independently, generate separate @keyframes for each\n6. Include the element selectors in your output\n\nOutput format:\n- First, a brief description of what you observe in the animation\n- Then the complete CSS code block\n\nUse this exact format:\n' + codeBlock + '\n\nIMPORTANT: Only output valid CSS. No explanations outside the code block.'
 }
 
 export async function analyzeFrames(
@@ -56,7 +26,6 @@ export async function analyzeFrames(
   const timestamps = frames.map((f) => f.timestamp)
   const prompt = buildPrompt(frames.length, timestamps)
 
-  // 构建 messages：system + 用户消息（含图片）
   const imageMessages = frames.map((frame) => ({
     type: 'image_url' as const,
     image_url: { url: frame.dataUrl },
@@ -66,7 +35,7 @@ export async function analyzeFrames(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: 'Bearer ' + apiKey,
     },
     body: JSON.stringify({
       model,
@@ -87,17 +56,15 @@ export async function analyzeFrames(
 
   if (!response.ok) {
     const error = await response.text()
-    throw new Error(`AI API error: ${response.status} - ${error}`)
+    throw new Error('AI API error: ' + response.status + ' - ' + error)
   }
 
   const data = await response.json()
   const content = data.choices?.[0]?.message?.content || ''
 
-  // 提取 CSS 代码块
   const cssMatch = content.match(/```css\n([\s\S]*?)```/)
   const css = cssMatch ? cssMatch[1].trim() : content
 
-  // 提取描述（代码块之前的内容）
   const descMatch = content.match(/^(?!```)[\s\S]*?(?=```css|$)/)
   const description = descMatch ? descMatch[0].trim() : ''
 
