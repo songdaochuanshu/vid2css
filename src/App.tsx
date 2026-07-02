@@ -22,7 +22,6 @@ export default function App() {
   })
   const [error, setError] = useState<string | null>(null)
 
-  // key 变化时自动保存
   useEffect(() => {
     try {
       if (apiKey) {
@@ -83,7 +82,6 @@ export default function App() {
       <Header />
 
       <main className="flex-1 max-w-3xl mx-auto w-full px-4 py-8 flex flex-col gap-6">
-        {/* API Key */}
         <div className="flex items-center gap-3">
           <label className="text-xs text-[var(--text-muted)] whitespace-nowrap">Agnes API Key</label>
           <input
@@ -120,7 +118,7 @@ export default function App() {
                 className="px-4 py-2 text-sm rounded-xl border border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.03] transition-all">Start Over</button>
               <button onClick={handleAnalyze} disabled={step === 'analyzing'}
                 className="flex-1 px-4 py-2 text-sm font-semibold rounded-xl bg-gradient-to-r from-[#3cefff] to-[#7b68ee] text-black disabled:opacity-50 transition-all">
-                {step === 'analyzing' ? 'Analyzing...' : 'Generate CSS'}
+                {step === 'analyzing' ? 'Analyzing...' : 'Generate Three.js'}
               </button>
             </div>
           </>
@@ -128,8 +126,8 @@ export default function App() {
 
         {step === 'result' && result && (
           <>
-            <Preview css={result.css} />
-            <CodeOutput css={result.css} description={result.description} />
+            <Preview code={result.code} />
+            <CodeOutput code={result.code} description={result.description} />
             <button onClick={handleReset}
               className="px-4 py-2 text-sm rounded-xl border border-white/10 text-[var(--text-secondary)] hover:bg-white/[0.03] transition-all">Start Over</button>
           </>
